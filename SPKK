@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#087f23">
+<title>Alfamart Khilkhet - Daily Attendance</title>
+<style>
+  :root {
+    --green:#087f23;
+    --green2:#0a9a2a;
+    --light:#f3f8f3;
+    --text:#172017;
+    --muted:#6c746c;
+    --border:#dfe7df;
+    --white:#fff;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0;
+    background:#eef3ee;
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  .app { max-width:720px; margin:0 auto; min-height:100vh; background:#fff; }
+  header {
+    background:linear-gradient(135deg,var(--green),var(--green2));
+    color:#fff; padding:20px 18px 18px;
+    position:sticky; top:0; z-index:10;
+    box-shadow:0 2px 12px rgba(0,0,0,.12);
+  }
+  .brand { font-size:18px; font-weight:800; letter-spacing:.2px; }
+  .branch { font-size:14px; opacity:.92; margin-top:3px; }
+  .topline {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; margin-top:16px;
+  }
+  .shift-badge {
+    background:#fff; color:var(--green); border-radius:999px;
+    padding:8px 12px; font-size:12px; font-weight:800;
+  }
+  .date-label { font-size:13px; font-weight:700; }
+  main { padding:16px; }
+  .controls {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;
+  }
+  label {
+    font-size:11px; font-weight:800; color:var(--muted);
+    display:block; margin-bottom:5px; text-transform:uppercase;
+  }
+  select {
+    width:100%; border:1px solid var(--border); background:#fff;
+    border-radius:12px; padding:12px 10px; font-size:14px; outline:none;
+  }
+  .summary {
+    display:flex; gap:8px; margin-bottom:14px; overflow:auto;
+  }
+  .pill {
+    flex:1; min-width:95px; border:1px solid var(--border);
+    border-radius:12px; padding:10px; background:var(--light);
+  }
+  .pill strong { display:block; font-size:17px; }
+  .pill span { font-size:11px; color:var(--muted); }
+  .list {
+    border:1px solid var(--border); border-radius:16px;
+    overflow:hidden; background:#fff;
+  }
+  .person {
+    display:flex; align-items:center; gap:10px;
+    padding:13px 12px; border-bottom:1px solid var(--border);
+  }
+  .person:last-child { border-bottom:0; }
+  .num {
+    width:30px; height:30px; border-radius:50%;
+    display:grid; place-items:center; background:#e9f5ea;
+    color:var(--green); font-size:12px; font-weight:800; flex:none;
+  }
+  .info { min-width:0; flex:1; }
+  .name { font-size:14px; font-weight:800; word-break:break-word; }
+  .id { font-size:11px; color:var(--muted); margin-top:2px; }
+  .check { color:var(--green); font-size:18px; font-weight:900; }
+  button {
+    border:0; background:#eaf5eb; color:var(--green);
+    padding:8px 10px; border-radius:9px; font-weight:800; font-size:11px;
+  }
+  .empty {
+    padding:28px 16px; text-align:center; color:var(--muted);
+    font-size:13px;
+  }
+  .present {
+    margin-top:14px; background:var(--green); color:#fff;
+    text-align:center; border-radius:13px; padding:14px 10px;
+    font-size:13px; font-weight:900; letter-spacing:.2px;
+  }
+  .footer {
+    padding:18px 16px 28px; text-align:center;
+    color:#8a928a; font-size:10px;
+  }
+  .modal {
+    position:fixed; inset:0; background:rgba(0,0,0,.5);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:30; padding:12px;
+  }
+  .modal.hidden { display:none; }
+  .sheet {
+    width:min(720px,100%); background:#fff; border-radius:22px 22px 14px 14px;
+    padding:20px 16px calc(20px + env(safe-area-inset-bottom));
+    box-shadow:0 -8px 30px rgba(0,0,0,.2);
+  }
+  .sheet h2 { margin:0 0 6px; font-size:20px; }
+  .sheet p { margin:0 0 16px; color:var(--muted); font-size:13px; }
+  .choice {
+    width:100%; padding:15px; margin-top:10px;
+    background:var(--green); color:#fff; font-size:14px;
+    border-radius:13px;
+  }
+  .choice.alt { background:#f0f5f0; color:var(--green); }
+  .toast {
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:#202520; color:#fff; padding:10px 14px; border-radius:10px;
+    font-size:12px; opacity:0; pointer-events:none; transition:.2s;
+    z-index:50;
+  }
+  .toast.show { opacity:1; }
+  @media (max-width:430px) {
+    main { padding:12px; }
+    header { padding-left:14px; padding-right:14px; }
+    .controls { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">আলফামার্ট ট্রেডিং বাংলাদেশ লিমিটেড</div>
+    <div class="branch">খিলক্ষেত ব্রাঞ্চ</div>
+    <div class="topline">
+      <div class="date-label" id="dateText"></div>
+      <div class="shift-badge" id="shiftText"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="controls">
+      <div>
+        <label for="dateSelect">Date</label>
+        <select id="dateSelect"></select>
+      </div>
+      <div>
+        <label for="shiftSelect">Shift</label>
+        <select id="shiftSelect">
+          <option value="M">Morning Shift</option>
+          <option value="A">Afternoon Shift</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="pill"><strong id="morningCount">0</strong><span>Morning</span></div>
+      <div class="pill"><strong id="afternoonCount">0</strong><span>Afternoon</span></div>
+      <div class="pill"><strong id="offCount">0</strong><span>OFF</span></div>
+    </div>
+
+    <div class="list" id="staffList"></div>
+    <div class="present">EVERYONE PRESENT AT RIGHT TIME ✅</div>
+  </main>
+
+  <div class="footer">A006 • Khilkhet Outlet • October 2026</div>
+</div>
+
+<div class="modal" id="shiftModal">
+  <div class="sheet">
+    <h2>Select Your Shift</h2>
+    <p>Choose which duty list you want to display.</p>
+    <button class="choice" onclick="chooseShift('M')">MORNING SHIFT</button>
+    <button class="choice" onclick="chooseShift('A')">AFTERNOON SHIFT</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied</div>
+
+<script>
+const ROSTER = {"month":"October 2026","days":["Thu 01","Fri 02","Sat 03","Sun 04","Mon 05","Tue 06","Wed 07","Thu 08","Fri 09","Sat 10","Sun 11","Mon 12","Tue 13","Wed 14","Thu 15","Fri 16","Sat 17","Sun 18","Mon 19","Tue 20","Wed 21","Thu 22","Fri 23","Sat 24","Sun 25","Mon 26","Tue 27","Wed 28","Thu 29","Fri 30","Sat 31"],"staff":[{"id":"1126010017","name":"BAYAZID KHANDOKER","shifts":["M","A","A","M","OFF","A","M","A","A","M","OFF","A","M","A","M","M","OFF","A","M","A","A","M","OFF","A","M","A","A","M","OFF","A","M"]},{"id":"1126070017","name":"MOHAMMAD BORHAN UDDIN","shifts":["A","M","OFF","A","M","M","A","M","OFF","A","M","M","A","M","OFF","A","A","M","A","M","OFF","A","A","M","A","M","OFF","A","M","M","A"]},{"id":"1126070072","name":"OPU RAYHAN","shifts":["M","A","M","OFF","OFF","A","M","A","M","M","OFF","A","M","M","A","M","M","OFF","A","A","M","A","M","OFF","A","A","M","M","A","M","OFF"]},{"id":"1126070046","name":"TANJIMUL FUAD","shifts":["M","A","M","OFF","A","M","A","A","M","OFF","A","M","M","A","M","M","OFF","A","M","M","M","OFF","A","A","M","M","M","OFF","A","A","M"]},{"id":"1126040005","name":"MD ISMAIL HOSSAIN","shifts":["M","OFF","A","A","M","A","M","OFF","A","M","A","M","M","OFF","A","A","A","M","M","OFF","A","A","A","A","M","OFF","A","A","A","M","M"]},{"id":"1126070033","name":"MD. SHOHEL RANA","shifts":["A","M","A","M","OFF","A","A","M","A","A","M","OFF","A","A","M","M","M","OFF","A","M","A","M","M","M","OFF","A","A","M","OFF","A","A"]},{"id":"1126070045","name":"AYSHA AKTER","shifts":["M","OFF","A","A","A","A","M","OFF","A","A","A","A","M","OFF","A","M","A","A","M","OFF","A","M","A","A","M","OFF","A","M","A","A","M"]},{"id":"1126070018","name":"KAZI KAWSAR AHMED","shifts":["A","A","M","M","M","OFF","A","M","A","A","M","OFF","A","A","A","A","M","M","OFF","A","A","M","M","OFF","A","A","M","A","M","OFF","A"]},{"id":"1126070067","name":"AKRAM HOSSAIN RANA","shifts":["A","M","OFF","A","A","M","A","M","OFF","A","A","M","A","A","M","OFF","A","A","A","M","M","OFF","A","A","A","M","M","OFF","A","M","A"]},{"id":"1126070057","name":"MST TINNI AKTER MIM","shifts":["OFF","A","M","OFF","A","M","OFF","A","M","M","OFF","A","A","M","A","A","M","M","OFF","A","M","A","M","M","A","M","A","A","M","A","M"]}]};
+
+const dateSelect = document.getElementById('dateSelect');
+const shiftSelect = document.getElementById('shiftSelect');
+const dateText = document.getElementById('dateText');
+const shiftText = document.getElementById('shiftText');
+const staffList = document.getElementById('staffList');
+const morningCount = document.getElementById('morningCount');
+const afternoonCount = document.getElementById('afternoonCount');
+const offCount = document.getElementById('offCount');
+const modal = document.getElementById('shiftModal');
+const toast = document.getElementById('toast');
+
+ROSTER.days.forEach((d, i) => {
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = formatDate(d);
+  dateSelect.appendChild(opt);
+});
+
+function formatDate(raw) {
+  const s = String(raw).trim();
+  const m = s.match(/(\d{1,2})[^\d]+(\d{1,2})[^\d]+(\d{2,4})/);
+  if (!m) return s;
+  let day = Number(m[1]), month = Number(m[2]), year = Number(m[3]);
+  if (year < 100) year += 2000;
+  const dt = new Date(year, month - 1, day);
+  return dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+
+function currentIndex() {
+  return Number(dateSelect.value || 0);
+}
+
+function render() {
+  const idx = currentIndex();
+  const shift = shiftSelect.value;
+  const date = ROSTER.days[idx];
+
+  dateText.textContent = formatDate(date);
+  shiftText.textContent = shift === 'M' ? 'MORNING SHIFT' : 'AFTERNOON SHIFT';
+
+  const counts = {M:0, A:0, OFF:0};
+  ROSTER.staff.forEach(p => counts[p.shifts[idx]]++);
+
+  morningCount.textContent = counts.M;
+  afternoonCount.textContent = counts.A;
+  offCount.textContent = counts.OFF;
+
+  const visible = ROSTER.staff.filter(p => p.shifts[idx] === shift);
+
+  if (!visible.length) {
+    staffList.innerHTML = '<div class="empty">No staff scheduled for this shift.</div>';
+    return;
+  }
+
+  staffList.innerHTML = visible.map((p, i) => `
+    <div class="person">
+      <div class="num">${i + 1}</div>
+      <div class="info">
+        <div class="name">${escapeHtml(p.name)}</div>
+        <div class="id">ID: ${escapeHtml(p.id)}</div>
+      </div>
+      <div class="check">✅</div>
+      <button onclick="copyName(${JSON.stringify(p.name)})">COPY</button>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+  }[c]));
+}
+
+async function copyName(name) {
+  try {
+    await navigator.clipboard.writeText(name);
+    showToast('Name copied');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = name;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('Name copied');
+  }
+}
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1200);
+}
+
+function chooseShift(s) {
+  shiftSelect.value = s;
+  localStorage.setItem('khilkhetShift', s);
+  modal.classList.add('hidden');
+  render();
+}
+
+dateSelect.addEventListener('change', render);
+shiftSelect.addEventListener('change', () => {
+  localStorage.setItem('khilkhetShift', shiftSelect.value);
+  render();
+});
+
+// Open shift selector on every visit, as requested.
+const savedShift = localStorage.getItem('khilkhetShift');
+shiftSelect.value = savedShift === 'A' ? 'A' : 'M';
+
+// Default to today's October date if it is within the roster; otherwise 1 Oct.
+const today = new Date();
+if (today.getFullYear() === 2026 && today.getMonth() === 9 && today.getDate() >= 1 && today.getDate() <= 31) {
+  dateSelect.value = String(today.getDate() - 1);
+} else {
+  dateSelect.value = '0';
+}
+
+render();
+modal.classList.remove('hidden');
+</script>
+</body>
+</html>
